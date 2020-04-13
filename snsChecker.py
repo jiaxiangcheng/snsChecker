@@ -370,24 +370,27 @@ def RepresentsInt(s):
 def getLocalIdentifies():
     return getpass.getuser(), socket.gethostname()
 
-def sendActivationkey(licenses, availableKeys, key):
+def sendActivationkey(key):
     localKey = key
     endLoop = False
 
-    validKeys = availableKeys.find()
-    keys = []
-    for item in validKeys:
-        keys.append(item["key"])
+    # get valid keys from api
+    url = "http://localhost:3000/availablekeys"
+    response = requests.get(url)
+    data = response.json()
+    validKeys = []
+    for key in data:
+        validKeys.append(key["key"])
 
+    id = getLicensesCount()
     while not endLoop:
         # check if key is valid
-        if localKey in keys:
+        if localKey in validKeys:
             # activate only if not exists
             [userId, machineId] = getLocalIdentifies()
-            if not licenses.count_documents({"userId": userId, "machineId": machineId, "key": localKey}) > 0:
-                id = licenses.count_documents({})
+            if not alreadyActivated(localKey):
                 license = {"_id": id, "userId": userId, "machineId": machineId, "key": localKey}
-                licenses.insert_one(license)
+                addLicense(license)
                 print("["+datetime.now().strftime("%d/%m/%Y %H:%M:%S")+"] - " + bcolors.OKGREEN + "Key registered successful! Restart the script please." + bcolors.ENDC)
                 endLoop = True
             else:
@@ -397,12 +400,29 @@ def sendActivationkey(licenses, availableKeys, key):
             print("["+datetime.now().strftime("%d/%m/%Y %H:%M:%S")+"] - " + bcolors.WARNING + "Invalid key!" + bcolors.ENDC)
             localKey = input()
 
-def alreadyRegistered(licenses):
+def addLicense(license):
+    url = "http://localhost:3000/licenses"
+    requests.post(url, json=license)
+
+def getLicensesCount():
+    url = "http://localhost:3000/licenses/total"
+    response = requests.get(url)
+    data = response.json()
+    return data["total"]
+
+def alreadyActivated(key):
     [userId, machineId] = getLocalIdentifies()
-    if licenses.count_documents({"userId": userId, "machineId": machineId}) > 0:
-        return True
-    else:
-        return False
+    url = "http://localhost:3000/licenses/check"
+    response = requests.get(url, json={"userId": userId, "machineId": machineId, "key": key})
+    data = response.json()
+    return data["data"]
+
+def alreadyRegistered():
+    [userId, machineId] = getLocalIdentifies()
+    url = "http://localhost:3000/licenses/check"
+    response = requests.get(url, json={"userId": userId, "machineId": machineId})
+    data = response.json()
+    return data["data"]
 
 def printLogo():
     print("""\
@@ -432,15 +452,10 @@ def main():
     # Connect to DB          #
     ##########################
 
-    mongoClient = MongoClient('mongodb+srv://admin:admin@cluster0-ojxmr.mongodb.net/test?retryWrites=true&w=majority')
-    db = mongoClient.sns
-    licenses = db.licenses
-    availableKeys = db.availableKeys
-
-    if not alreadyRegistered(licenses):
+    if not alreadyRegistered():
         print("["+datetime.now().strftime("%d/%m/%Y %H:%M:%S")+"] - " + bcolors.OKBLUE + "Please input your activation key:" + bcolors.ENDC)
         key = input()
-        sendActivationkey(licenses, availableKeys, key)
+        sendActivationkey(key)
     else:
         ##########################
         # read input from user   #

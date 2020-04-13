@@ -36,7 +36,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-
 def create_proxyauth_extension(threadID, proxy_host, proxy_port,proxy_username, proxy_password,scheme='http', plugin_path=None):
     """Proxy Auth Extension
 
@@ -375,7 +374,7 @@ def sendActivationkey(key):
     endLoop = False
 
     # get valid keys from api
-    url = "http://localhost:3000/availablekeys"
+    url = "https://snschecker.herokuapp.com/availablekeys"
     response = requests.get(url)
     data = response.json()
     validKeys = []
@@ -401,25 +400,25 @@ def sendActivationkey(key):
             localKey = input()
 
 def addLicense(license):
-    url = "http://localhost:3000/licenses"
+    url = "https://snschecker.herokuapp.com/licenses"
     requests.post(url, json=license)
 
 def getLicensesCount():
-    url = "http://localhost:3000/licenses/total"
+    url = "https://snschecker.herokuapp.com/licenses/total"
     response = requests.get(url)
     data = response.json()
     return data["total"]
 
 def alreadyActivated(key):
     [userId, machineId] = getLocalIdentifies()
-    url = "http://localhost:3000/licenses/check"
+    url = "https://snschecker.herokuapp.com/licenses/check"
     response = requests.get(url, json={"userId": userId, "machineId": machineId, "key": key})
     data = response.json()
     return data["data"]
 
 def alreadyRegistered():
     [userId, machineId] = getLocalIdentifies()
-    url = "http://localhost:3000/licenses/check"
+    url = "https://snschecker.herokuapp.com/licenses/check"
     response = requests.get(url, json={"userId": userId, "machineId": machineId})
     data = response.json()
     return data["data"]
@@ -448,18 +447,13 @@ def main():
         accountsPath = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) + "/accounts.csv"
         proxiesPath = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) + "/proxies.csv"
 
-    ##########################
-    # Connect to DB          #
-    ##########################
-
+    # authenticate the user
     if not alreadyRegistered():
         print("["+datetime.now().strftime("%d/%m/%Y %H:%M:%S")+"] - " + bcolors.OKBLUE + "Please input your activation key:" + bcolors.ENDC)
         key = input()
         sendActivationkey(key)
     else:
-        ##########################
-        # read input from user   #
-        ##########################
+        # read inputs from user
         isInt = False
         numBrowsers = 1
         print("["+datetime.now().strftime("%d/%m/%Y %H:%M:%S")+"] - " + bcolors.OKBLUE + "Choose the number of browsers to open:" + bcolors.ENDC)
@@ -483,7 +477,6 @@ def main():
             localHost = True
 
         # options.headless = True
-        # options.add_argument("--window-size=%s" % WINDOW_SIZE)
 
         # read data from local files
         accounts = readCSV(accountsPath, "accounts")
